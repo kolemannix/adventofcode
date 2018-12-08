@@ -1,34 +1,8 @@
+use crate::file::load_file;
 use std::collections::HashMap;
 
 fn has_two_or_three(input: &str) -> (bool, bool) {
     let mut result_map: HashMap<char, usize> = HashMap::new();
-    let mut exactly_two = (None, false);
-    let mut exactly_three = (None, false);
-    for c in input.chars() {
-        match result_map.get_mut(&c) {
-            Some(count) => {
-                *count = *count + 1;
-                if *count == 2 {
-                    exactly_two = (Some(c), true);
-                }
-                if *count == 3 {
-                    if exactly_two.0 == Some(c) {
-                        exactly_two = (None, false);
-                    }
-                    exactly_three = (Some(c), true);
-                }
-            }
-            None => {
-                result_map.insert(c, 1);
-            }
-        }
-    }
-    (exactly_two.1, exactly_three.1)
-}
-
-fn count_frequencies(input: &str) -> HashMap<char, usize> {
-    let mut result_map: HashMap<char, usize> = HashMap::new();
-
     for c in input.chars() {
         match result_map.get_mut(&c) {
             Some(count) => {
@@ -39,7 +13,17 @@ fn count_frequencies(input: &str) -> HashMap<char, usize> {
             }
         }
     }
-    result_map
+    let mut has_two = false;
+    let mut has_three = false;
+    result_map.iter().for_each(|(_, v)| {
+        if *v == 2 as usize {
+            has_two = true;
+        }
+        if *v == (3 as usize) {
+            has_three = true;
+        }
+    });
+    (has_two, has_three)
 }
 
 fn checksum<T: AsRef<str>>(input: Vec<T>) -> i32 {
@@ -56,7 +40,9 @@ fn checksum<T: AsRef<str>>(input: Vec<T>) -> i32 {
 }
 
 pub fn solve() -> i32 {
-    2
+    let problem = load_file("src/day2/day2input.txt");
+    let solution = checksum(problem);
+    solution
 }
 
 #[cfg(test)]

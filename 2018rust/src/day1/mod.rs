@@ -1,5 +1,5 @@
+use crate::file::load_file;
 use std::collections::HashSet;
-use file::load_file;
 
 fn convert(num_str: &str) -> Result<i32, std::num::ParseIntError> {
     // .parse works when a leading + or - is included, e.g.,
