@@ -39,10 +39,38 @@ fn checksum<T: AsRef<str>>(input: Vec<T>) -> i32 {
     twos * threes
 }
 
-pub fn solve() -> i32 {
+pub fn part1() -> i32 {
     let problem = load_file("src/day2/day2input.txt");
     let solution = checksum(problem);
     solution
+}
+
+pub fn part2() -> String {
+    let input = load_file("src/day2/day2input.txt");
+    let mut ans = None;
+    for v in &input {
+        for p in &input {
+            let mut diff = 0;
+            let mut mismatch_idx = None;
+            let v_chars = v.chars().enumerate();
+            let mut p_chars = p.chars();
+            for (i, c) in v_chars {
+                if Some(c) != p_chars.next() {
+                    mismatch_idx = Some(i);
+                    diff = diff + 1;
+                }
+            }
+            if diff == 1 {
+                let mut answer = v.clone();
+                answer.remove(mismatch_idx.expect("No mismatch_idx"));
+                ans = Some(answer);
+            }
+        }
+    }
+    match ans {
+        Some(a) => a,
+        None => panic!("No answer!!!"),
+    }
 }
 
 #[cfg(test)]
