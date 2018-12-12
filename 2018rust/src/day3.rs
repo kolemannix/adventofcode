@@ -11,6 +11,8 @@ struct Claim {
     height: u32,
 }
 
+// TODO: Implement this conversion in terms of an idiomatic type class impl
+// Determine whether From, Into, or AsStr, or AsRef<str> is correct
 fn parse_claim(s: &str) -> Result<Claim, std::num::ParseIntError> {
     let re = Regex::new(r"^#([0-9]*) @ ([0-9]*),([0-9]*): ([0-9]*)x([0-9]*)$").unwrap();
     let cap = re.captures(s).unwrap();
@@ -28,7 +30,9 @@ pub fn part1() -> i32 {
     let mut occupied: HashMap<(u32, u32), u32> = HashMap::new();
 
     for s in &problem {
+        // TODO: Parse claims once
         let claim = parse_claim(s).unwrap();
+        // TODO: Implement a point_iterator method on Claim!
         for x in claim.x..claim.x + claim.width {
             for y in claim.y..claim.y + claim.height {
                 match occupied.get_mut(&(x, y)) {
