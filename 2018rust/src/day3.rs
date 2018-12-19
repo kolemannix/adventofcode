@@ -52,8 +52,10 @@ pub fn part1() -> i32 {
         for x in claim.x..claim.x + claim.width {
             for y in claim.y..claim.y + claim.height {
                 match occupied.get(&(x, y)) {
-                    Some(i) if *i > 1 => { no_overclaimed = false; },
-                    _ => { () },
+                    Some(i) if *i > 1 => {
+                        no_overclaimed = false;
+                    }
+                    _ => (),
                 }
             }
         }
@@ -73,8 +75,8 @@ pub fn part1() -> i32 {
     overclaimed
 }
 
-pub fn part2() -> i32 {
-let problem = load_file("src/day3/day3input.txt");
+pub fn part2() -> u32 {
+    let problem = load_file("src/day3/day3input.txt");
     let mut occupied: HashMap<(u32, u32), u32> = HashMap::new();
     for s in &problem {
         // TODO: Parse claims once
@@ -98,8 +100,10 @@ let problem = load_file("src/day3/day3input.txt");
         for x in claim.x..claim.x + claim.width {
             for y in claim.y..claim.y + claim.height {
                 match occupied.get(&(x, y)) {
-                    Some(i) if *i > 1 => { no_overclaimed = false; },
-                    _ => { () },
+                    Some(i) if *i > 1 => {
+                        no_overclaimed = false;
+                    }
+                    _ => (),
                 }
             }
         }
