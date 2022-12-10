@@ -1,183 +1,117 @@
 #![feature(iter_array_chunks)]
 
 use anyhow::{Error, Result};
-use std::{cell::RefCell, rc::Rc, slice::Iter, str::FromStr};
+use std::collections::HashMap;
+mod day7;
 mod helper;
 mod past;
-struct Engine {
-    pwd: Rc<RefCell<FSEntry>>,
-    root: Rc<RefCell<FSEntry>>,
-}
 
-impl Engine {
-    fn exec(&mut self, entry: &InputEntry) {
-        println!("EXEC from {}: {:?}", self.pwd.borrow().name(), &entry);
-        match entry {
-            InputEntry::Cmd(FSCmd::CdDir { name }) => {
-                if name == "/" {
-                    self.pwd = self.root.clone();
-                } else {
-                    let pwd = self.pwd.clone();
-                    let child = pwd
-                        .borrow()
-                        .children_iter()
-                        .find(|c| c.borrow().name() == name)
-                        .unwrap_or_else(|| panic!("Expected child: {name}"))
-                        .clone();
-                    self.pwd = child;
-                }
-            }
-            InputEntry::Cmd(FSCmd::CdUp) => {
-                let cur_pwd = self.pwd.clone();
-                println!("GO UP from {}", cur_pwd.borrow().name());
-                if let Some(parent) = cur_pwd.borrow().parent() {
-                    self.pwd = parent;
-                };
-            }
-            InputEntry::Cmd(FSCmd::LS) => {
-                // No need to do anything
-            }
-            InputEntry::Output(FSEntry::Dir(dir)) => {
-                let mut pwd = self.pwd.borrow_mut();
-                if let FSEntry::Dir(FSDir { children, .. }) = &mut *pwd {
-                    let mut dir_to_add = dir.clone();
-                    dir_to_add.parent = Some(self.pwd.clone());
-                    children.push(Rc::new(RefCell::new(FSEntry::Dir(dir_to_add))));
-                }
-            }
-            InputEntry::Output(file @ FSEntry::File { .. }) => {
-                if let Some(children) = self.pwd.borrow_mut().children_mut() {
-                    children.push(Rc::new(RefCell::new(file.clone())));
-                }
-            }
-        };
-    }
-}
-
-#[derive(Debug, Clone)]
-enum FSEntry {
-    File { name: String, size: usize },
-    Dir(FSDir),
-}
-
-#[derive(Debug, Clone)]
-struct FSDir {
-    name: String,
-    children: Vec<Rc<RefCell<FSEntry>>>,
-    parent: Option<Rc<RefCell<FSEntry>>>,
-}
-
-impl FSEntry {
-    fn parent(&self) -> Option<Rc<RefCell<FSEntry>>> {
-        match self {
-            FSEntry::File { .. } => None,
-            FSEntry::Dir(dir) => dir.parent.clone(),
+fn day8() -> Result<String> {
+    let input = helper::load_puzzle_to_string(8, 1)?;
+    let mut grid: Vec<Vec<u32>> = vec![];
+    for (line_num, line) in input.lines().enumerate() {
+        grid.push(vec![]);
+        for c in line.chars() {
+            let num: u32 = c.to_digit(10).unwrap();
+            grid[line_num].push(num);
         }
     }
-    fn children_mut(&mut self) -> Option<&mut Vec<Rc<RefCell<FSEntry>>>> {
-        match self {
-            FSEntry::File { .. } => None,
-            FSEntry::Dir(dir) => Some(&mut dir.children),
+    let mut sum_seen = 0;
+    let mut scenic_scores: HashMap<(usize, usize), u32> = HashMap::new();
+    // TODO: A dynamic programming solution that leverages the optimal substucture, namely:
+    // If my neighbor is visible, and I am greater than my neighbor, I am visible.
+    // If my neighbor is not visible, and I am less than or equal to my neighbor, then I am not
+    // visible.
+    'outer: for (y, line) in grid.iter().enumerate() {
+        // These lines to skip edges are not needed for part 2, but do not affect the solution
+        // since the best tree is not on an edge
+        if y == 0 || y == grid.len() - 1 {
+            sum_seen += line.len();
+            continue 'outer;
         }
-    }
-    fn children_iter(&self) -> Iter<Rc<RefCell<FSEntry>>> {
-        match self {
-            FSEntry::File { .. } => [].iter(),
-            FSEntry::Dir(dir) => dir.children.iter(),
-        }
-    }
-    fn name(&self) -> &String {
-        match self {
-            FSEntry::File { name, .. } => name,
-            FSEntry::Dir(dir) => &dir.name,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-enum InputEntry {
-    Cmd(FSCmd),
-    Output(FSEntry),
-}
-
-#[derive(Debug, Clone)]
-enum FSCmd {
-    CdDir { name: String },
-    CdUp,
-    LS,
-}
-
-impl FromStr for InputEntry {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut chars = s.chars().peekable();
-        let first = chars.next().unwrap();
-        if first == '$' {
-            chars.next();
-            let cmd_char = chars.next().unwrap();
-            match cmd_char {
-                'c' => {
-                    chars.next(); // Eat d
-                    chars.next(); // Eat space
-                    let dest = chars.peek().unwrap();
-                    if *dest == '.' {
-                        Ok(InputEntry::Cmd(FSCmd::CdUp))
-                    } else {
-                        let dest_name: String = chars.collect();
-                        Ok(InputEntry::Cmd(FSCmd::CdDir { name: dest_name }))
-                    }
-                }
-                'l' => {
-                    chars.next(); // Eat s
-                    Ok(InputEntry::Cmd(FSCmd::LS))
-                }
-                _ => Err(anyhow::anyhow!("Could not parse command")),
+        'inner: for (x, n) in line.iter().enumerate() {
+            // These lines to skip edges are not needed for part 2, but do not affect the solution
+            // since the best tree is not on an edge
+            if x == 0 || x == line.len() - 1 {
+                sum_seen += 1;
+                continue 'inner;
             }
-        } else if first == 'd' {
-            chars.next(); // eat i
-            chars.next(); // eat r
-            chars.next(); // eat space
-            let dir_name: String = chars.collect();
-            Ok(InputEntry::Output(FSEntry::Dir(FSDir {
-                name: dir_name,
-                children: vec![],
-                parent: None,
-            })))
-            // Dir
-        } else if first.is_numeric() {
-            // File entry
-            let mut parts = s.split_whitespace();
-            let size: usize = parts.next().unwrap().parse()?;
-            let name: String = parts.next().unwrap().to_string();
-            Ok(InputEntry::Output(FSEntry::File { name, size }))
-        } else {
-            Err(anyhow::anyhow!("Did not parse command or output"))
+            // Can we see a way out from here for c
+            // Up
+            let mut up_score = 0;
+            let mut my_y: usize = y;
+            loop {
+                if my_y == 0 {
+                    break;
+                }
+                my_y -= 1;
+                up_score += 1;
+                let next = grid[my_y][x];
+                println!("UP    for {x},{y}: {n}: {next}");
+                if next >= *n {
+                    break;
+                }
+            }
+            // Down
+            let mut down_score = 0;
+            my_y = y;
+            loop {
+                if my_y == grid.len() - 1 {
+                    break;
+                }
+                my_y += 1;
+                down_score += 1;
+                let next = grid[my_y][x];
+                println!("DOWN  for {x},{y}: {n}: {next}");
+                if next >= *n {
+                    break;
+                }
+            }
+            // Left
+            let mut left_score = 0;
+            let mut my_x = x;
+            loop {
+                if my_x == 0 {
+                    break;
+                }
+                my_x -= 1;
+                left_score += 1;
+                let next = grid[y][my_x];
+                println!("LEFT  for {x},{y}: {n}: {next}");
+                if next >= *n {
+                    break;
+                }
+            }
+            // Right
+            let mut right_score = 0;
+            let mut my_x = x;
+            loop {
+                if my_x == line.len() - 1 {
+                    break;
+                }
+                my_x += 1;
+                right_score += 1;
+                let next = grid[y][my_x];
+                println!("RIGHT for {x},{y}: {n}: {next}");
+                if next >= *n {
+                    break;
+                }
+            }
+            scenic_scores.insert((x, y), up_score * down_score * left_score * right_score);
+            // if up_vis || down_vis || left_vis || right_vis {
+            //     println!("VISIBLE {x},{y}: {n}");
+            //     sum_seen += 1;
+            // }
         }
     }
-}
-
-fn day7() -> Result<String> {
-    let root = Rc::new(RefCell::new(FSEntry::Dir(FSDir {
-        name: "/".into(),
-        children: vec![],
-        parent: None,
-    })));
-    let mut engine = Engine {
-        pwd: root.clone(),
-        root,
-    };
-    let input = helper::load_puzzle_to_string(7, 0)?;
-    let commands = input.lines().flat_map(|line| line.parse::<InputEntry>());
-    for cmd in commands {
-        engine.exec(&cmd);
-        println!("{cmd:?}");
-    }
-    Ok("unimpl".to_string())
+    // println!("Part 1: {sum_seen}");
+    // println!("{scenic_scores:?}");
+    let max = scenic_scores.into_values().max().unwrap();
+    Ok(max.to_string())
 }
 
 fn main() -> Result<()> {
-    let res = day7()?;
-    println!("{res}"); // 3059
+    let res = day8()?;
+    println!("{res}");
     Ok(())
 }
