@@ -1,7 +1,7 @@
 #![feature(iter_array_chunks)]
 
 use anyhow::{Error, Result};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 mod day7;
 mod helper;
 mod past;
@@ -110,8 +110,61 @@ fn day8() -> Result<String> {
     Ok(max.to_string())
 }
 
+const ROPE_LEN: usize = 10;
+
+fn day9() -> Result<String> {
+    let input = helper::load_puzzle_to_string(9, 1)?;
+    let mut rope: [(i32, i32); ROPE_LEN] = [(100, 100); ROPE_LEN];
+    let mut seen: HashSet<(i32, i32)> = HashSet::new();
+    for line in input.lines() {
+        // First move head
+        let mut chars = line.chars();
+        let dir = chars.next().unwrap();
+        chars.next().unwrap();
+        let count: u32 = chars.collect::<String>().parse()?;
+        for _ in 0..count {
+            // Do a move in dir direction
+            match dir {
+                'R' => {
+                    rope[0].0 += 1;
+                }
+                'L' => {
+                    rope[0].0 -= 1;
+                }
+                'U' => {
+                    rope[0].1 += 1;
+                }
+                'D' => {
+                    rope[0].1 -= 1;
+                }
+                _ => {
+                    panic!("Expected move");
+                }
+            }
+            for i in 1..ROPE_LEN {
+                let local_head_pos = rope[i - 1];
+                let local_tail_pos = rope[i];
+                let diff_x: i32 = local_head_pos.0 - local_tail_pos.0;
+                let diff_y: i32 = local_head_pos.1 - local_tail_pos.1;
+                let abs_x = diff_x.abs();
+                let abs_y = diff_y.abs();
+                let touching = abs_x <= 1 && abs_y <= 1;
+                let x_move = if touching { 0 } else { diff_x.signum() };
+                let y_move = if touching { 0 } else { diff_y.signum() };
+                rope[i] = (local_tail_pos.0 + x_move, local_tail_pos.1 + y_move);
+                if i == ROPE_LEN - 1 {
+                    seen.insert(local_tail_pos);
+                }
+            }
+        }
+        seen.insert(rope[ROPE_LEN - 1]);
+    }
+    let tail_pos_count = seen.len();
+    Ok(tail_pos_count.to_string())
+}
+
 fn main() -> Result<()> {
-    let res = day8()?;
+    let res = day9()?;
     println!("{res}");
     Ok(())
 }
